@@ -19,6 +19,6 @@ This is a collection of lecture notes from SES 5215, as taught in fall 2020. Onl
 [Relationships](https://ses-5215-f2020.github.io/LectureNotes/Week3-Thursday){target="_blank"}
 
 ## Week 5
-[Relationships and regression](https://ses-5215-f2020.github.io/LectureNotes/Week5-Tuesday){target="_blank"}
+[Relationships and regression](https://ses-5215-f2020.github.io/LectureNotes/Week-5-Tuesday){target="_blank"}
 
-[Transformations and interactions](https://ses-5215-f2020.github.io/LectureNotes/Week5-Thursday){target="_blank"}
+[Transformations and interactions](https://ses-5215-f2020.github.io/LectureNotes/Week-5-Thursday){target="_blank"}
