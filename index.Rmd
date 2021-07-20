@@ -1,0 +1,24 @@
+---
+title: "Lecture Notes"
+author: "Carole Voulgaris"
+date: "9/3/2020"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+This is a collection of lecture notes from SES 5215, as taught in fall 2020. Online lecture notes were not used (and are therefore not available) for all lectures.
+
+## Week 2
+[Distributions and proportions](https://ses-5215-f2020.github.io/LectureNotes/Week2-Thursday){target="_blank"}
+
+## Week 3
+[Relationships](https://ses-5215-f2020.github.io/LectureNotes/Week3-Thursday){target="_blank"}
+
+## Week 5
+[Relationships and regression](https://ses-5215-f2020.github.io/LectureNotes/Week5-Tuesday){target="_blank"}
+
+[Transformations and interactions](https://ses-5215-f2020.github.io/LectureNotes/Week5-Thursday){target="_blank"}

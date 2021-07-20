@@ -1,0 +1,151 @@
+---
+title: "Relationships and Regression"
+author: "Carole Voulgaris"
+date: "9/27/2020"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+## Connecting the dots between Week 3 and Week 4
+
+It's possible to do a regression with just one independent variable. When you do the results will be closely related to what you find when you run a correlation test (if the independent variable is continuous) or a (set of) two-sample t-test(s).
+
+Here are some examples using the dataset from the tutorial in weeks 3 and 4.
+
+Again, `read_csv()` loads the data into our environment. 
+
+I'm going to recode a couple of variables exactly as I did in Week 4.
+
+```{r load data, results='hide'}
+hh_data <- read_csv("households.csv") %>%
+  mutate(struct_type = case_when(
+    BLD_label=="2 Apartments" ~ "LT_10_apts",
+    BLD_label=="10-19 Apartments" ~ "TenTo49apts",
+    BLD_label=="One-family house detached" ~ "1SFhome",
+    BLD_label=="3-4 Apartments" ~ "LT_10_apts",
+    BLD_label=="Mobile home or trailer" ~ "MH_veh",
+    BLD_label=="50 or more apartments" ~ "GT_49_apts",
+    BLD_label=="20-49 Apartments" ~ "TenTo49apts",
+    BLD_label=="5-9 Apartments" ~ "LT_10_apts",
+    BLD_label=="One-family house attached" ~ "1SFhome",
+    BLD_label=="Boat, RV, van, etc." ~ "MH_veh")) %>%
+  mutate(engl_prof = 
+           LNGI_label == "At least one person in the household 14 and over speaks English only or speaks English 'very well'")
+```
+
+### Comparing regression and correlation
+
+Here is the result of the correlation I ran in Week 3 between the age of a structure and the rent for a home in that structure:
+
+``` {r two continuous}
+cor_age_rent <- cor.test(hh_data$age_struct, hh_data$GRNTP)
+
+cor_age_rent
+```
+
+The correlation is statistically significant at a 95-percent confidence level (i.e. the p-value is much less than 0.05), and the value of the correlation is -0.05
+
+We can also look at the relationship between those two variables using a simple linear regression, like this:
+
+```{r}
+regress_age_rent <- lm(GRNTP ~ age_struct, data = hh_data)
+
+summary(regress_age_rent)
+```
+
+You may have wondered, if R-squared tells us how well the model fits the data, what is it a square of? What is R? 
+
+In a linear model with only one independent variable, R is the correlation between the independent variable and the dependent variable (if there are several independent variables, think of it as a correlation between the dependent variable and the collective set of independent variables).
+
+Here, I'll prove it. Here's the square of the correlation between rent and building age:
+
+```{r}
+cor_age_rent$estimate^2
+```
+
+And here's the R-squared value from the regression:
+
+```{r}
+summary(regress_age_rent)$r.squared
+```
+
+Same!
+
+You'll also find that the p-value for the correlation is the same as the p-value for the overall model, and the p-value for the independent variable's coefficient. This is a little easier to see when the p-value is a little higher (so it isn't just reported as <2e-16), so let's take a look at the relationship between the age of a structure and the number of bedrooms:
+
+```{r}
+cor_age_BR <- cor.test(hh_data$BDSP, hh_data$age_struct)
+
+cor_age_BR
+```
+
+The correlation is 0.0118. Remember that the square of the correlation is the R-squared value, which also tells us the percentage of the variation in one variable that can be explained by the variation in the other. We can get that value by just squaring the correlation estimate:
+
+```{r}
+cor_age_BR$estimate^2
+```
+
+Or by actually running a regression:
+
+```{r}
+regress_age_BR <- lm(hh_data$BDSP ~ hh_data$age_struct)
+
+summary(regress_age_BR)
+```
+
+You can see that the R-squared value for the regression is 0.00014 - the same as we got from just squaring the correlation estimate. And the p-value for the regression coefficient is 0.00359 - the same as the p-value for the correlation.
+
+This is actually a pretty helpful thing to know if you are calculating a correlation in Excel. Excel doesn't tell you the p-value of a correlation (which is one of several quirky things about Excel that make me prefer R for statistical analysis), but you can get it by doing a regression, because it does report p-values for regression coefficient. 
+
+### Comparing a two-sample t-test and regression
+
+Here is the two-sample t-test I did in the tutorial for Week 3:
+
+``` {r two-sample t-test}
+diff_rent_engl = t.test(GRNTP ~ engl_prof,
+                    data = hh_data)
+
+diff_rent_engl
+```
+
+That result tells me that: the average rent paid by households without English proficiency is \$1370 per month, the average rent for households with English proficiency is \$1507 per month. The 95-percent confidence interval for the difference between these two means is -\$154 to -\$120. We can get the estimate for that difference by either taking the difference between the two means:
+
+```{r}
+diff_rent_engl$estimate[1] - diff_rent_engl$estimate[2]
+```
+
+Or by taking the average (or mid-point) of the two sides of the confidence interval:
+
+```{r}
+(diff_rent_engl$conf.int[1] + diff_rent_engl$conf.int[2]) / 2
+```
+
+The p-value for the difference is shown as < 2.2e-16.
+
+We'll get the same result for both the p-value and the difference by doing a regression:
+
+```{r}
+regress_rent_engl = lm(GRNTP ~ engl_prof, data = hh_data)
+
+summary(regress_rent_engl)
+```
+
+The coefficient for the variable `engl_profTRUE` is 137.013, which indicates that rent for households with English language proficiency $137 higher than for households without English language proficiency. This is identical to the value from the t-test. 
+
+Likewise the p-value for the overall model and for that coefficient is < 2.2e-16, same is the p-value for the t-test.
+
+## Takeaway
+
+If you only have one variable that you want to use to predict another variable, regression will give you the same answer as a correlation or a two-sample t-test.
+
+The advantage of regression over those simple test of one-to-one relationships is that it allows you to control for (i.e. account for) the effects of other variables that might have an influence on the relationship you're interested in.

@@ -1,0 +1,224 @@
+---
+title: "Lecture notes for September 10"
+author: "Carole Voulgaris"
+date: "9/9/2020"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, echo = FALSE}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r, echo = FALSE}
+x <- seq(-7, 7, by = .1)
+y_stand <- dnorm(x, mean = 0, sd = 1.0)
+y_right <- dnorm(x, mean = 2, sd = 1.0)
+y_wider <- dnorm(x, mean = 0, sd = 2.0)
+
+
+x_count <- seq(0, 20, by = 1)
+y_poisson <- dpois(x_count, lambda = 3)
+y_nbinom <- dnbinom(x_count, size = 20, prob = 0.9)
+
+x_log <- seq(0, 100, by = 1)
+y_log <- dlnorm(x_log, meanlog = 3, sdlog = 0.5)
+
+data_stand <- tibble(x = x, y = y_stand, dist = "standard")
+data_right <- tibble(x = x, y = y_right, dist = "shifted")
+data_wider <- tibble(x = x, y = y_wider, dist = "wide")
+data_log <- tibble(x = x_log, y = y_log)
+
+data_poisson <- tibble(x = x_count, y = y_poisson)
+data_nbinom <- tibble(x = x_count, y = y_nbinom)
+
+data_shift <- rbind(data_stand, data_right)
+data_stretch <- rbind(data_stand, data_wider)
+```
+
+## The Normal Distribution
+
+This is a histogram of some made-up continuous variable that is normally distributed. A lot of variables in the real world end up following a distribution like this, or at least sort of like this - where the average value is also the most common value, and values lower and higher than that are pretty much equally common. In popular culture, you'll sometimes see this referred to as a "bell curve." 
+
+```{r, echo = FALSE}
+ggplot(data = data_stand, aes(x = x, y = y)) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(name = "The Value of Some Variable") +
+  scale_y_continuous(name = "Frequency",
+                     breaks = breaks <- seq(0, 0.5, by = 0.1),
+                     labels = breaks * 1000) +
+  theme_bw() 
+```
+
+## Other distributions
+
+Examples of other distribution shapes include:
+
+A Poisson distribution (useful for count data):
+
+```{r, echo = FALSE}
+ggplot(data = data_poisson, aes(x = x, y = y)) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(name = "The Value of Some Variable") +
+  scale_y_continuous(name = "Frequency",
+                     breaks = breaks <- seq(0, 0.3, by = 0.01),
+                     labels = breaks * 1000) +
+  theme_bw() 
+```
+
+A negative binomial distribution (also useful for count data):
+
+```{r, echo = FALSE}
+ggplot(data = data_nbinom, aes(x = x, y = y)) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(name = "The Value of Some Variable") +
+  scale_y_continuous(name = "Frequency",
+                     breaks = breaks <- seq(0, 0.3, by = 0.01),
+                     labels = breaks * 1000) +
+  theme_bw() 
+```
+
+A log-normal distribution (which you can easily transform to be a normal distribution - it's useful for data that tends to increase exponentially):
+
+```{r, echo = FALSE}
+ggplot(data = data_log, aes(x = x, y = y)) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(name = "The Value of Some Variable") +
+  scale_y_continuous(name = "Frequency",
+                     breaks = breaks <- seq(0, 0.05, by = 0.005),
+                     labels = breaks * 1000) +
+  theme_bw() 
+```
+
+And the trusty uniform distribution:
+
+```{r, echo = FALSE}
+ggplot(data = data_log, aes(x = x, y = 600)) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(name = "The Value of Some Variable") +
+  scale_y_continuous(name = "Frequency",
+                     breaks = seq(0, 600, by = 50)) +
+  theme_bw() 
+```
+
+But in this course, we'll be focusing on data that's normally distributed.
+
+## Describing a distribution
+
+You can describe a distribution in terms of its approximate overall shape (e.g. normal, negative binomial, etc), its central tendency, and its spread. 
+
+### Central tendency
+
+Central tendency can be described as the *mean or average* (these are the same thing), but if your data has *outliers* (a small number of extreme observations that don't match what you'd otherwise expect from the general distribution because they are really high or really low), then these outlier points will have a disproportionate effect on the average.
+
+An alternative measure of central tendency is the *median*, which isn't effected by outliers. It's the middle value. Half of the values in the dataset will be less than the median and half of the values will be greater than the median. In a normal distribution, the mean and the median will be the same.
+
+Here are two normal distributions that have the same spread, but different central tendencies (with the mean/median for each indicated by a vertical line).
+
+```{r, echo=FALSE}
+ggplot(data = data_shift, aes(x = x, y = y, lty = dist)) +
+  geom_line() +
+  geom_vline(xintercept = 0, lty = 2) +
+  geom_vline(xintercept = 2) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.text = element_blank(),
+        axis.title = element_blank())
+```
+
+Here is a log-normal distribution, where the mean and median are different:
+
+```{r, echo=FALSE}
+ggplot(data = data_log, aes(x = x, y = y)) +
+  geom_line() +
+  geom_vline(xintercept = 27, lty = 2) +
+  geom_vline(xintercept = 35) +
+  theme_bw() +
+  annotate("text", x = 18, y = 0.045, size = 4, 
+           label = "median",
+           hjust = 0, vjust = 1) +
+  annotate("text", x = 36, y = 0.045, size = 4, 
+           label = "mean",
+           hjust = 0, vjust = 1) +
+  theme(legend.position = "none",
+        axis.text = element_blank(),
+        axis.title = element_blank())
+```
+
+### Spread
+
+Spread is commonly measured in terms of *standard deviation*, which you can think of as the average difference bewteen all the values in your dataset and the average value (that's not quite what the math is, but that's basically it). It's a measure of how much variation there is in the data - if all your observations had the same value, the standard deviation would be zero.
+
+Another measure of spread is the *range* of the data, which is just the difference between the minimum and maximum values.
+
+Like the average, the standard deviation is sensitive to outliers (and the range is even more sensitive to ourliers). If you want a measure of spread, you can use ranges between *percentiles*. A percentile is the number below which a certain percentage of your data values fall. For example, term for a median would be the 50th percentile, because 50 percent of your data is less than the median value. The 25th, 50th, and 75th percentiles are also called *quartiles* and the difference between the 25th and 75th percentile. 
+
+Here is are two normal distributions with the same mean/median, different standard deviations. The width of one standard deviation for a normal distribution for the narrower distribution is shown in darker gray, and the width of one standard deviation for the wider of the two distributions is shown in lighter gray.
+
+```{r, echo = FALSE}
+ggplot(data = data_stretch, aes(x = x, y = y, lty = dist,
+                              ymin = Inf, ymax = -Inf)) +
+  geom_rect(fill = "darkgray", alpha = 0.8, 
+            aes(xmin = 0, xmax = 1)) +
+  geom_rect(fill = "lightgray", alpha = 0.1, 
+            aes(xmin = -2, xmax = 0)) +
+  geom_line() +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.text = element_blank(),
+        axis.title = element_blank())
+```
+
+And here is the interquartile range of a normal distribution:
+
+```{r, echo = FALSE}
+ggplot(data = data_wider, aes(x = x, y = y,
+                              xmin = -2*0.67448, xmax = 2*0.67448,
+                              ymin = Inf, ymax = -Inf)) +
+  geom_rect(color = "gray", alpha = 0.8) +
+  annotate("text", x = 0, y = 0.08, size = 4, 
+           label = "50% of the data",
+           hjust = 0.5) +
+  geom_line() +
+  annotate("text", x = -2.8, y = 0.02, size = 4, 
+           label = "25% of the data",
+           hjust = 0.5) +
+    annotate("text", x = 2.8, y = 0.02, size = 4, 
+           label = "25% of the data",
+           hjust = 0.5) +
+  theme_bw() +
+  theme(legend.position = "none",
+      #  axis.text = element_blank(),
+        axis.title = element_blank())
+```
+
+## Uncertainty in the population mean
+
+Let's say you wanted to know the average amount of time that graduate students at Harvard spend studying. You could randomly select 100 graduate students and ask them to tell you how may hours they spend studying each week. It would be an incredible coincidence if the average among those 100 students turned out to be exactly the same as the average for all grad students at Harvard. But here's a fun fact:
+
+If you did a whole bunch of surveys, and each one included 100 randomly selected students, and you took the average time studying from each of those surveys, the average of all those averages would be the average of the full population, and the distribution of all those averages would be a normal distributions. 
+
+As a result of this fun fact, it's possible to take the average and standard deviation from one of those surveys and calculate a range of values where you can be 95 percent confident that the real average for the full population is somewhere in that range. This is called a *95-percent confidence interval*.
+
+*P.S. This could get weird, but you could caluculate a 95-percent confidence interval even if you surveyed *all *of the graduate students at Harvard. In this case, the interpretation of the 95-percent confidence interval would be that you can be 95-percent confident that the average of all hypothetical graduate students that might exist across all parallel universes lies within that range (assuming this universe is representative of all other universes).* 
+
+If your sample represents the entire population, this is called a *census* (PSA: the United States Census is called a census because it's supposed to be a count of every single person living in the United States - if you live in the United States and haven't responded to the Census yet, you can do it [here](https://2020census.gov/en/ways-to-respond.html){target="_blank"}.)
+
+In real life, if your sample is a census, you probably don't need to calculate a 95-percent confidence interval for the mean, but I'll still ask you to do it for assignments in this class, with a note that you realize that your sample is census that confidence interval is sort of hypothetical.
+
+You can use a *one-sample t-test* to calculate a 95-percent-confidence interval for a population mean.
+
+## Proportions
+
+The most reasonable way to describe the distribution of a categorical variable is as the proportion of your sample that falls into each category.
+
+You can think of a proportion of observations in a particular category as the average of a variable with a value of 1 if the observation is in that category and zero if it isn't. That means you can calculate the 95-percent confidence interval for a proportion with a one-sample t-test, the same way you would for a continuous variable.

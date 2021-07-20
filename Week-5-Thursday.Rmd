@@ -1,0 +1,192 @@
+---
+title: "Lecture notes for October 1"
+author: "Carole Voulgaris"
+date: "10/1/2020"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidycensus)
+library(tidyverse)
+library(jtools)
+library(interactions)
+```
+
+```{r load data, results='hide', echo = FALSE, message=FALSE}
+ppl_data <- get_pums(variables = c("SEX", "PINCP", "WKHP", 
+                                      "JWMNP", "AGEP"),
+                        state = "TX", 
+                        year = 2018, 
+                        survey = "acs1",
+                        recode = TRUE) %>%
+  mutate(income_k = PINCP / 1000) %>%
+  filter(WKHP > 0, income_k > 0, JWMNP >0) %>%
+  select(AGEP, SEX_label, income_k, WKHP, JWMNP)
+```
+
+
+## Things to try to improve model fit
+
+When you specify a model like this:
+
+```{r}
+model1 <- lm(JWMNP ~ WKHP + income_k + AGEP + SEX_label, 
+            data = ppl_data)
+```
+
+```{r, echo = FALSE}
+model2 <- lm(JWMNP ~ WKHP + log(income_k) + AGEP + SEX_label, 
+            data = ppl_data)
+```
+
+You're testing the theory that each of the independent variables has an independent, linear relationship with the dependent variable. 
+
+But what if there's a non-linear relationship? Or what if the relationship between two variables depends on the value of a third variable?
+
+## Variable transformation
+
+A linear relationship would look like this:
+
+```{r, warning=FALSE, message=FALSE, echo = FALSE}
+effect_plot(model1, pred = income_k, interval = TRUE) +
+  scale_x_continuous(name = "Annual income (thousands)",
+                     limits = c(0, 500),
+                     breaks = breaks <- seq(0, 500, by = 50),
+                     labels = paste("$", 
+                                    prettyNum(breaks, big.mark = "'"),
+                                    sep = "")) +
+  scale_y_continuous(name = "Travel time to work (minutes)",
+                     breaks = seq(20, 30, by = 1),
+                     limit = c(20,30)) +
+  scale_color_discrete(name = "") +
+  scale_linetype_discrete(name = "") +
+  scale_fill_discrete(name = "") 
+```
+
+But the actual relationship might look like this:
+
+```{r, warning=FALSE, message=FALSE, echo = FALSE}
+effect_plot(model2, pred = income_k, interval = TRUE) +
+  scale_x_continuous(name = "Annual income (thousands)",
+                     limits = c(0, 500),
+                     breaks = breaks <- seq(0, 500, by = 50),
+                     labels = paste("$", 
+                                    prettyNum(breaks, big.mark = "'"),
+                                    sep = "")) +
+  scale_y_continuous(name = "Travel time to work (minutes)",
+                     breaks = seq(20, 30, by = 1),
+                     limit = c(20,30)) +
+  scale_color_discrete(name = "") +
+  scale_linetype_discrete(name = "") +
+  scale_fill_discrete(name = "") 
+```
+
+If there isn't a linear relationship with a variable, there might be a linear relationship with the log of that variable:
+
+```{r, warning=FALSE, message=FALSE, echo = FALSE}
+effect_plot(model2, pred = income_k, interval = TRUE) +
+  scale_x_continuous(name = "Annual income (thousands)",
+                     limits = c(20, 500),
+                     breaks = breaks <- c(20, 50, 100, 200,
+                                          500),
+                    labels = paste("$", 
+                                    prettyNum(breaks, big.mark = "'"),
+                                    sep = ""),
+                     trans = "log") +
+  scale_y_continuous(name = "Travel time to work (minutes)",
+                     breaks = seq(20, 30, by = 1),
+                     limit = c(20,30)) +
+  scale_color_discrete(name = "") +
+  scale_linetype_discrete(name = "") +
+  scale_fill_discrete(name = "") 
+```
+
+This will often be the case when you think a constant increase in a value might not always have the same effect on an outcome (e.g. increasing your income from \$5,000 per year to \$10,000 might make a bigger difference than increasing it from \$50,000 per year to \$55,000 per year), but that a constant percent increase would ahve a constant effect (e.g. increasing your income from \$5,000 per year to \$6,000 per year would make the same difference as increasing it from \$50,000 per year to \$60,000 per year).
+
+If you want your regression to show the effect of a constant percent increase (for example, the effect of doubling your income), then you can log-transform the variable when you specify your model, like this:
+
+```{r}
+model2 <- lm(JWMNP ~ WKHP + log(income_k) + AGEP + SEX_label, 
+            data = ppl_data)
+```
+
+Let's compare the results of those two models:
+
+```{r, echo=FALSE}
+coeff_names <- c("Weekly work hours" = "WKHP",
+                 "Annual income (thousands)" = "income_k",
+                 "Annual income\n(log-transformed)" = 
+                   "log(income_k)",
+                 "Age" = "AGEP",
+                 "Male\n(compared to female)" = "SEX_label.L")
+
+export_summs(model1, model2, 
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             coefs = coeff_names)
+```     
+
+The first model tells us that every increase in income of \$1,000 per year is associated with an increase in commute time of about one 100th of a minute. Or, since it's hard to think about units of time that small, you could also describe the relationship by saying that every increase in income of \$100,000 per year is associated with a 1-minute increase in commute time.
+
+The second model tells us that a doubling in household income is associated with an increase in commute time of about 1.4 minutes.
+
+Both models have about the same fit. If we showed more than two decimal place, we'd see that the first model has a R-square value just less than 0.02, and the second model has an R-square value just greater than 0.02, but both round to 0.02.
+
+## Variable interactions
+
+What if the effect of age on commute time is different for men than for women? Here is the relationship between age and commute time, based on our initial model, for both men and women.
+
+```{r, warning=FALSE, message=FALSE, echo = FALSE}
+interact_plot(model1, pred = AGEP, modx = SEX_label, interval = TRUE) +
+  scale_x_continuous(name = "Age") +
+  scale_y_continuous(name = "Travel time to work (minutes)",
+                     breaks = seq(0, 45, by = 5)) +
+  scale_color_discrete(name = "") +
+  scale_linetype_discrete(name = "") +
+  scale_fill_discrete(name = "") 
+```
+
+The model suggests that men's commutes are about three minutes longer than women's, and this difference holds true regardless of the number of hours people work per week. In other words, the two lines above are parallel, but only because the model forces them to be parallel. If we want to allow the lines for men and women to have different slopes, we can include an interaction term like this:
+
+```{r}
+model3 <- lm(JWMNP ~ WKHP + income_k + AGEP + SEX_label +
+               SEX_label:WKHP, 
+            data = ppl_data)
+```
+
+Here is the relationship between age and commute time for men and women, based on the results of the model where we allow the slopes of the lines for men and women to be different by including an interaction term.
+
+```{r, warning=FALSE, message=FALSE, echo = FALSE}
+interact_plot(model3, pred = WKHP, modx = SEX_label, interval = TRUE) +
+  scale_x_continuous(name = "Age") +
+  scale_y_continuous(name = "Travel time to work (minutes)",
+                     breaks = seq(0, 45, by = 5)) +
+  scale_color_discrete(name = "") +
+  scale_linetype_discrete(name = "") +
+  scale_fill_discrete(name = "") 
+```
+
+Now we can see that the difference in commute time between men and women increases with age. Here's how that looks in the model results:
+
+```{r, echo=FALSE}
+coeff_names <- c("Weekly work hours" = "WKHP",
+                 "Annual income (thousands)" = "income_k",
+                 "Annual income\n(log-transformed)" = 
+                   "log(income_k)",
+                 "Age" = "AGEP",
+                 "Male\n(compared to female)" = "SEX_label.L",
+                 "Interaction: Male and work hours" = "WKHP:SEX_label.L")
+
+export_summs(model1, model2, model3, 
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             coefs = coeff_names)
+``` 
+
+The positive, significant value for work hours means that longer work weeks are associated with longer commutes. The positive, significant interaction term for males and work hours means that, for men, there is *additional* increase in commute time for each hour worked.
